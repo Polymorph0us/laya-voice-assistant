@@ -547,6 +547,17 @@ def git_push_project(
             timeout=60,
         )
 
+        if push_proc.returncode != 0:
+            # If rejected (e.g. remote created with auto_init or non-fast-forward), retry with --force
+            logger.info("Initial push rejected, retrying with --force...")
+            push_proc = subprocess.run(
+                ["git", "push", "--force", "-u", auth_push_url, branch],
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+
         if push_proc.returncode == 0:
             return ToolResult(
                 success=True,
@@ -555,7 +566,6 @@ def git_push_project(
             )
         else:
             err = (push_proc.stderr or push_proc.stdout).strip()
-            # If rejected because remote has existing commits, try pull/rebase or force push if initial
             logger.warning(f"Git push failed: {err}")
             return ToolResult(
                 success=False,
