@@ -1,0 +1,21 @@
+[project]
+name = "laya-assistant"
+version = "0.1.0"
+description = "Laya-powered personal PC voice assistant"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+dependencies = [
+    "laya>=0.3.25",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
+voice = ["pyttsx3", "sounddevice", "edge-tts"]
+
+[project.scripts]
+laya-assistant = "scripts.run:main"

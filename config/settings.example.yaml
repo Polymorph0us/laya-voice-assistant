@@ -1,0 +1,38 @@
+assistant:
+  name: "Laya"
+
+laya:
+  preload: true
+  max_loaded: 2
+  device: "cpu"
+  default_model: "english"
+
+logging:
+  console_level: "INFO"
+  file_level: "DEBUG"
+  human_readable: true
+
+# ── Spotify Web API (optional but recommended for actual playback) ──────────
+# Get credentials at: https://developer.spotify.com/dashboard
+# Create an app → set Redirect URI to: http://127.0.0.1:8888/callback
+# Then paste your Client ID and Secret below.
+
+spotify:
+  client_id: "YOUR_SPOTIFY_CLIENT_ID"
+  client_secret: "YOUR_SPOTIFY_CLIENT_SECRET"
+  redirect_uri: "http://127.0.0.1:8888/callback"
+
+# ── System 2 Brain (LLM) ────────────────────────────────────────────────────
+# Ollama runs locally on your PC (fast, private, zero cost).
+llm:
+  provider: "ollama"
+  ollama_url: "http://localhost:11434"
+  ollama_model: "qwen3:4b"
+  api_key: "YOUR_GEMINI_API_KEY_OPTIONAL"
+
+# ── GitHub Integration (for repo creation, commit, and management) ──────────
+# Generate a Personal Access Token at: https://github.com/settings/tokens
+# Scopes needed: 'repo' and 'delete_repo'
+github:
+  token: "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
+  username: "YOUR_GITHUB_USERNAME"

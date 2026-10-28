@@ -1,0 +1,44 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Configuration & Sensitive Credentials
+config/settings.yaml
+.spotify_token_cache
+.env
+*.pem
+*.key
+
+# Data & Persistent Databases
+data/*.db
+data/*.sqlite3
+data/*.sqlite
+data/*.jsonl
+
+# Logs
+logs/
+*.log
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
