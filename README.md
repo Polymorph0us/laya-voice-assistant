@@ -179,12 +179,14 @@ Edit `config/settings.yaml` with your optional API tokens (GitHub Personal Acces
 
 **Interactive Text Mode:**
 ```powershell
-python scriptsun.py
+python scripts
+un.py
 ```
 
 **Full Voice Mode (Push-to-Talk on `Right Ctrl`):**
 ```powershell
-python scriptsun.py --voice
+python scripts
+un.py --voice
 ```
 
 ---

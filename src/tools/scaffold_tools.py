@@ -418,7 +418,7 @@ def generate_project_readme(dest_file: str = "README.md", include_personality: b
     """Generate a detailed, publication-ready README with Laya's unique persona."""
     path = _resolve_user_path(dest_file)
 
-    readme_content = """# 🎙️ Laya — Dual-Brain Desktop AI Voice Assistant
+    readme_content = r"""# 🎙️ Laya — Dual-Brain Desktop AI Voice Assistant
 
 <div align="center">
 
@@ -599,12 +599,12 @@ Edit `config/settings.yaml` with your optional API tokens (GitHub Personal Acces
 
 **Interactive Text Mode:**
 ```powershell
-python scripts\run.py
+python scripts/run.py
 ```
 
 **Full Voice Mode (Push-to-Talk on `Right Ctrl`):**
 ```powershell
-python scripts\run.py --voice
+python scripts/run.py --voice
 ```
 
 ---
