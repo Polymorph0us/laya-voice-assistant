@@ -393,7 +393,7 @@ def clean_unneeded_files(
             if not entry.is_file():
                 continue
             ext = entry.suffix.lower()
-            if ext in _INSTALLER_EXTENSIONS or ext in _ARCHIVE_EXTENSIONS:
+            if ext in _INSTALLER_EXTENSIONS:
                 try:
                     stat = entry.stat()
                     last_used = _get_file_last_used_timestamp(stat)
