@@ -33,16 +33,21 @@ def _build_tool_schemas(messages: list[dict] | None = None) -> list[dict]:
     ensure_tools_loaded()
 
     # Determine conversational domain context
+    user_requests_text = ""
     context_text = ""
     if messages:
         for m in messages:
             content = m.get("content")
+            text_val = ""
             if isinstance(content, str):
-                context_text += " " + content.lower()
+                text_val = content.lower()
             elif isinstance(content, list):
                 for part in content:
                     if isinstance(part, dict) and "text" in part:
-                        context_text += " " + part["text"].lower()
+                        text_val += " " + part["text"].lower()
+            context_text += " " + text_val
+            if m.get("role") == "user":
+                user_requests_text += " " + text_val
 
     file_keywords = (
         "file", "files", "folder", "folders", "directory", "directories",
@@ -51,9 +56,19 @@ def _build_tool_schemas(messages: list[dict] | None = None) -> list[dict]:
         ".txt", ".pdf", ".docx", ".csv", ".json", ".py", ".md", ".cpp", "cpp", "c++",
         "assignment", "scaffold", "create a folder", "create folder", "template", "project", "readme"
     )
-    has_file_context = any(kw in context_text for kw in file_keywords) if context_text else False
 
-    github_keywords = ("github", "repo", "repos", "repository", "repositories", "fork", "forks", "commit", "clone", "push")
+    disk_keywords = (
+        "unneeded", "unnecessary", "unused", "usetime", "use time", "usage",
+        "cleanup", "clean", "junk", "temp", "cache", "storage", "free space",
+        "disk space", "installer", "installers", "downloads", "large file", "large files"
+    )
+    has_file_context = any(kw in context_text for kw in file_keywords) if context_text else False
+    has_disk_context = any(kw in context_text for kw in disk_keywords) or has_file_context
+
+    github_keywords = (
+        "github", "repo", "repos", "repository", "repositories", "fork", "forks",
+        "commit", "clone", "push", "public", "private", "visibility"
+    )
     has_github_context = any(kw in context_text for kw in github_keywords) if context_text else False
 
     shell_keywords = ("shell", "terminal", "command", "cmd", "powershell", "bash", "execute", "run", "git", "npm", "pip", "pytest", "python", "script")
@@ -64,12 +79,21 @@ def _build_tool_schemas(messages: list[dict] | None = None) -> list[dict]:
         if not registered_tool.definition.enabled:
             continue
 
+        # Prune disk analysis & cleanup tools unless disk/file cleanup context
+        if name in ("analyze_unneeded_files", "clean_unneeded_files") and not has_disk_context:
+            continue
+
+        # Only expose destructive clean_unneeded_files if user explicitly asked to clean or delete
+        clean_intent = any(w in user_requests_text for w in ("clean", "cleanup", "delete", "purge", "remove", "clear", "wipe"))
+        if name == "clean_unneeded_files" and not clean_intent:
+            continue
+
         # Prune MCP filesystem tools and native file tools unless user requested file/folder operations
         if (name.startswith("mcp_filesystem_") or name in ("scaffold_project", "create_file", "read_file_content", "generate_project_readme")) and not has_file_context:
             continue
 
         # Prune GitHub repo management tools unless user requested GitHub operations
-        if name in ("cleanup_forked_repos", "create_github_repo", "delete_github_repo", "list_github_repos", "git_push_project") and not has_github_context:
+        if name in ("cleanup_forked_repos", "create_github_repo", "delete_github_repo", "list_github_repos", "git_push_project", "update_github_repo") and not has_github_context:
             continue
 
         # Prune shell tools unless user requested shell/command/github operations
@@ -186,7 +210,8 @@ class System2:
             "\n- NEVER search local files or call filesystem tools when setting event reminders. Complete the reminder using 'set_reminder'."
             "\n- Reminders vs Memory: ALWAYS use 'set_reminder' for reminders, alerts, or alarms. NEVER call 'remember_fact' for reminders or time-based tasks."
             "\n- Project & Contest Scaffolding: When the user asks to create a folder structure, contest folder (like AtCoder, Codeforces, ABC), or batch-create files with templates, call 'scaffold_project'. Pass base_dir (e.g. 'Documents/projects/cf/contests/AtCoder/ABC_481'), files (e.g. 'a.cpp, b.cpp, c.cpp, d.cpp, e.cpp, f.cpp'), and template_source (e.g. 'template.cpp'). It automatically creates the folder structure, creates all files, finds the existing template, copies it into the new folder, and analyzes the template in a single step."
-            "\n- GitHub & Publishing Projects: When the user asks to create a new GitHub repo, write a detailed README with personality, and push this project: First call 'generate_project_readme' to generate the full README.md with your unique persona. Next, call 'git_push_project' with repo_name (e.g. 'laya-voice-assistant') and commit_message. It automatically creates the repo on GitHub if needed, initializes git, stages project files respecting .gitignore, commits, and pushes directly to GitHub in one complete step! You also have 'run_shell_command' for arbitrary terminal commands."
+            "\n- GitHub & Publishing Projects: When the user asks to create a new GitHub repo, write a detailed README with personality, and push this project: First call 'generate_project_readme' to generate the full README.md with your unique persona. Next, call 'git_push_project' with repo_name (e.g. 'laya-voice-assistant') and commit_message. It automatically creates the repo on GitHub if needed, initializes git, stages project files respecting .gitignore, commits, and pushes directly to GitHub in one complete step! To update repository visibility (make public or private), description, or topics, call 'update_github_repo'. You also have 'run_shell_command' for arbitrary terminal commands."
+            "\n- File & Disk Usage Analysis: When the user asks to analyze files, find unnecessary or unneeded files based on usage/access time, or inspect disk space, call 'analyze_unneeded_files'. Once you receive the analysis result, synthesize and report the findings directly to the user (total gigabytes, top old installers, and temporary cache); do NOT call 'clean_unneeded_files' unless the user explicitly told you to delete or clean them."
             "\n- Filesystem Privacy: NEVER inspect, list, or read files, documents, or directories on disk unless the user explicitly requested a file/document operation."
             "\n- Browser & Web Access: You have direct browser capabilities! Use 'read_webpage' to inspect live URLs, 'search_and_read' to extract live answers from web pages, and 'browser_interact' to click or automate web forms."
             "\n- Pay close attention to conversation history when the user refers to previous context ('them', 'it', 'yes', 'proceed', etc.). "
@@ -309,6 +334,15 @@ class System2:
                 content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
 
             clean_str = content.strip()
+
+            # Check for XML-wrapped tool calls like <function_call>...</function_call> or <tool_call>...</tool_call>
+            fn_tag_match = re.search(r"<(?:function_call|tool_call)>\s*(.*?)\s*</(?:function_call|tool_call)>", clean_str, flags=re.DOTALL)
+            if fn_tag_match:
+                clean_str = fn_tag_match.group(1).strip()
+
+            # Strip markdown code blocks if wrapped in ```json ... ```
+            clean_str = re.sub(r"^```(?:json)?\s*", "", clean_str)
+            clean_str = re.sub(r"\s*```$", "", clean_str).strip()
 
             # Check if model outputted a JSON list of tool calls inside content
             if clean_str.startswith("[") and ("\"name\"" in clean_str or "\"function\"" in clean_str):

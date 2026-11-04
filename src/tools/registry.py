@@ -173,6 +173,7 @@ def ensure_tools_loaded() -> None:
         import src.core.memory
         import src.tools.scaffold_tools
         import src.tools.shell_tools
+        import src.tools.disk_analysis_tools
     except Exception as e:
         logger.error(f"Failed to auto-import tools: {e}")
 

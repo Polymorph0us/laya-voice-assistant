@@ -102,8 +102,13 @@ Laya resolves this by borrowing Daniel Kahneman’s dual-process cognitive model
 
 ### 💻 Developer & Workspace Scaffolding
 - **Contest Scaffolding:** One-step creation of competitive programming directories (e.g. `ABC_481`), template discovery, analysis (`solve()` detection, fast I/O), and multi-file generation (`a.cpp` through `f.cpp`).
-- **GitHub Repository Suite:** Create repositories, inspect repo lists, safely batch-clean forks, and publish local workspaces.
+- **GitHub Repository Suite:** Create repositories, update repository visibility and metadata, inspect repo lists, safely batch-clean forks, and publish local workspaces.
 - **Shell Runner:** Safe execution of arbitrary terminal commands, tests, and scripts.
+
+### 🧹 System & Disk Intelligence
+- **File Usage & Stale File Analysis:** `analyze_unneeded_files` scans Windows temporary files, user Downloads, and large unaccessed files (>20 MB) based on true access and modification timestamps (`max(atime, mtime)`).
+- **Safe Clutter Cleanup:** `clean_unneeded_files` enables controlled deletion of stale installer packages and temporary junk files with a safety-first dry-run confirmation barrier.
+
 
 ---
 
@@ -127,6 +132,7 @@ Laya resolves this by borrowing Daniel Kahneman’s dual-process cognitive model
 │   │   └── provider.py         # Ollama System 2 brain & dynamic schema pruning
 │   ├── tools/
 │   │   ├── app_tools.py        # Windows application launcher & process control
+│   │   ├── disk_analysis_tools.py # Disk usage inspection & unneeded file identification
 │   │   ├── browser_tools.py    # Web scraping, page reading & automation
 │   │   ├── github_tools.py     # GitHub management & project publisher
 │   │   ├── media_tools.py      # Spotify API & hardware media keys

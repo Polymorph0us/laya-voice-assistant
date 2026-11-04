@@ -226,6 +226,129 @@ def create_github_repo(repo_name: str, private: bool = True, description: str = 
 
 
 @register(
+    name="update_github_repo",
+    description="Update a GitHub repository's visibility (public or private), description, topics, or homepage",
+    permission=PermissionLevel.SAFE,
+    category="developer",
+    parameters=[
+        ToolParameter(
+            name="repo_name",
+            type="string",
+            description="The name of the repository to update (e.g. 'laya-voice-assistant')",
+        ),
+        ToolParameter(
+            name="private",
+            type="boolean",
+            description="Set to False to make repository PUBLIC, or True to make it PRIVATE",
+            required=False,
+            default=False,
+        ),
+        ToolParameter(
+            name="description",
+            type="string",
+            description="New description for the repository",
+            required=False,
+            default="",
+        ),
+        ToolParameter(
+            name="topics",
+            type="string",
+            description="Optional comma-separated topics or tags for the repository (e.g. 'voice-assistant, ai, python')",
+            required=False,
+            default="",
+        ),
+    ],
+)
+def update_github_repo(
+    repo_name: str,
+    private: bool = False,
+    description: str = "",
+    topics: str = "",
+    **kwargs: Any,
+) -> ToolResult:
+    """Update repository visibility, description, and topics on GitHub."""
+    token, username = _get_github_auth()
+
+    if not token:
+        return ToolResult(
+            success=False,
+            error="Missing GITHUB_TOKEN",
+            message="To update GitHub repositories, please add your GitHub token to config/settings.yaml.",
+        )
+
+    headers = _get_github_headers(token)
+    repo_clean = repo_name.strip()
+    if "/" in repo_clean:
+        owner, repo_clean = repo_clean.split("/", 1)
+    else:
+        owner = username
+
+    if not owner:
+        try:
+            u_resp = httpx.get("https://api.github.com/user", headers=headers, timeout=10.0)
+            if u_resp.status_code == 200:
+                owner = u_resp.json().get("login", "")
+        except Exception:
+            pass
+
+    if not owner:
+        return ToolResult(success=False, error="Cannot determine GitHub user", message="Could not determine GitHub username.")
+
+    patch_payload: dict[str, Any] = {"private": bool(private)}
+    if description.strip():
+        patch_payload["description"] = description.strip()
+
+    try:
+        # 1. Update repo visibility and description
+        repo_url = f"https://api.github.com/repos/{owner}/{repo_clean}"
+        resp = httpx.patch(repo_url, headers=headers, json=patch_payload, timeout=15.0)
+
+        if resp.status_code not in (200, 201):
+            return ToolResult(
+                success=False,
+                error=f"HTTP {resp.status_code}",
+                message=f"Failed to update repository settings: {resp.text[:150]}",
+            )
+
+        data = resp.json()
+        html_url = data.get("html_url", f"https://github.com/{owner}/{repo_clean}")
+        vis_str = "private" if private else "public"
+
+        # 2. Update topics if provided
+        topics_applied = []
+        if topics.strip():
+            raw_topics = [t.strip().lower() for t in topics.split(",") if t.strip()]
+            topics_resp = httpx.put(
+                f"https://api.github.com/repos/{owner}/{repo_clean}/topics",
+                headers=headers,
+                json={"names": raw_topics},
+                timeout=10.0,
+            )
+            if topics_resp.status_code == 200:
+                topics_applied = raw_topics
+
+        msg = f"Repository '{repo_clean}' is now {vis_str.upper()} on GitHub ({html_url})."
+        if description.strip():
+            msg += f" Description set to: '{description.strip()}'."
+        if topics_applied:
+            msg += f" Topics: {', '.join(topics_applied)}."
+
+        return ToolResult(
+            success=True,
+            message=msg,
+            data={
+                "name": repo_clean,
+                "url": html_url,
+                "private": private,
+                "description": description,
+                "topics": topics_applied,
+            },
+        )
+    except Exception as e:
+        return ToolResult(success=False, error=str(e), message=f"Error updating repository '{repo_clean}': {e}")
+
+
+@register(
     name="cleanup_forked_repos",
     description="Batch delete forked repositories on GitHub with exclusion support. Safeguarded with preview/confirmation.",
     permission=PermissionLevel.DANGEROUS,
